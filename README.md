@@ -2,7 +2,7 @@
 wenet python wrapper for runtime
 
 # TODO:
-- [ ] simple wrapper support load and recognize funtion
-- [ ] wheel test
+- [x] simple wrapper support load and recognize funtion
+- [x] wheel test
 - [ ] many linux
 - [ ] others
