@@ -1,5 +1,5 @@
-#include "post_processor/post_processor.h"
 #include "boost/json/src.hpp"
+#include "post_processor/post_processor.h"
 #include "utils/string.h"
 #include "utils/timer.h"
 #include "utils/utils.h"
@@ -95,8 +95,9 @@ InitDecodeResourceFromParams(const Params &params) {
   }
 
   wenet::PostProcessOptions post_process_opts;
-  post_process_opts.language_type =
-      params.language_type == 0 ? wenet::kMandarinEnglish : wenet::kIndoEuropean;
+  post_process_opts.language_type = params.language_type == 0
+                                        ? wenet::kMandarinEnglish
+                                        : wenet::kIndoEuropean;
   post_process_opts.lowercase = params.lower_case;
   resource->post_processor =
       std::make_shared<wenet::PostProcessor>(std::move(post_process_opts));
@@ -112,7 +113,8 @@ SimpleAsrModelWrapper::SimpleAsrModelWrapper(const Params &params) {
   decode_resource_ = InitDecodeResourceFromParams(params);
 }
 
-std::string SimpleAsrModelWrapper::Recognize(char *pcm, int num_samples, int nbest) {
+std::string SimpleAsrModelWrapper::Recognize(char *pcm, int num_samples,
+                                             int nbest) {
   std::vector<float> pcm_data(num_samples);
   const int16_t *pdata = reinterpret_cast<const int16_t *>(pcm);
   for (int i = 0; i < num_samples; i++) {
