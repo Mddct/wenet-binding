@@ -1,4 +1,5 @@
 #include "post_processor/post_processor.h"
+#include "boost/json/src.hpp"
 #include "utils/string.h"
 #include "utils/timer.h"
 #include "utils/utils.h"
