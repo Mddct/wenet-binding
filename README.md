@@ -4,5 +4,5 @@ wenet python wrapper for runtime
 # TODO:
 - [x] simple wrapper support load and recognize funtion
 - [x] wheel test
-- [ ] many linux
-- [ ] others
+- [ ] github action many linux
+- [ ] download model by language type

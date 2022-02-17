@@ -45,10 +45,11 @@ else()
   link_directories(${boost_SOURCE_DIR}/stage/lib)
 endif()
 
+# TODO: use boost from wenet
 FetchContent_Declare(boost
   URL      https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.gz
   URL_HASH SHA256=aeb26f80e80945e82ee93e5939baebdca47b9dee80a07d3144be1e1a6a66dd6a
-)
+  )
 FetchContent_MakeAvailable(boost)
 include_directories(${boost_SOURCE_DIR})
 link_directories(${boost_SOURCE_DIR}/stage/lib)
@@ -80,3 +81,32 @@ pybind11_add_module(_pywrap_wenet MODULE
 target_link_libraries(_pywrap_wenet PRIVATE
   runtime_wrapper
   )
+
+# hard code
+# TODO: passing variable
+function(mv_wrap_lib)
+  set(libtorch_SOURCE_DIR "../wenet_wrapper/interface/wenet/runtime/server/x86/fc_base/libtorch-src/")
+  set(openfst_SOURCE_DIR "..//wenet_wrapper/interface/wenet/runtime/server/x86/fc_base/openfst-build/")
+  set(python_LIB_DIR "../python/wenet/lib")
+
+  add_custom_command(TARGET _pywrap_wenet  POST_BUILD
+    # COMMAND cp ${libtorch_SOURCE_DIR}/lib/libtorch_cpu.so lib
+    # COMMAND cp ${libtorch_SOURCE_DIR}/lib/libtorch.so lib
+    # COMMAND cp ${libtorch_SOURCE_DIR}/lib/libc10.so lib
+    # COMMAND cp ${libtorch_SOURCE_DIR}/lib/libgomp-52f2fd74.so.1 lib
+    # COMMAND cp ${libtorch_SOURCE_DIR}/lib/libgomp-52f2fd74.so.1 lib
+    # COMMAND cp -r ${openfst_SOURCE_DIR}/src/lib/.libs/libfst.so.8 lib
+    COMMAND rm -rf  ${python_LIB_DIR}/*.so
+    COMMAND cp _pywrap_wenet*.so ${python_LIB_DIR}
+    COMMAND cp libruntime_wrapper*.so ${python_LIB_DIR}}
+
+    COMMAND cp -L ${libtorch_SOURCE_DIR}/lib/libtorch_cpu.so ${python_LIB_DIR}
+    COMMAND cp -L ${libtorch_SOURCE_DIR}/lib/libtorch.so ${python_LIB_DIR}
+    COMMAND cp -L ${libtorch_SOURCE_DIR}/lib/libc10.so ${python_LIB_DIR}
+    COMMAND cp -L ${libtorch_SOURCE_DIR}/lib/libgomp-52f2fd74.so.1 ${python_LIB_DIR}
+    COMMAND cp -L ${libtorch_SOURCE_DIR}/lib/libgomp-52f2fd74.so.1 ${python_LIB_DIR}
+    COMMAND cp  ${openfst_SOURCE_DIR}/src/lib/.libs/libfst.so* ${python_LIB_DIR}
+
+    )
+endfunction()
+mv_wrap_lib()
