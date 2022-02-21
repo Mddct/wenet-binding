@@ -1,11 +1,9 @@
 
-from lib._pywrap_wenet import Params, SimpleAsrModelWrapper
+from wenet.lib._pywrap_wenet import Params, SimpleAsrModelWrapper
 
 import json
 import wave
 import os
-
-os.environ["LD_LIBRARY_PATH"] = "lib:" + os.environ.get("LD_LIBRARY_PATH", "")
 
 # TODO: other model support eg: wenetspeech
 MODELS = {
