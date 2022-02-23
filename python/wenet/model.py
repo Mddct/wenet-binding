@@ -32,11 +32,11 @@ class WenetWrapper(object):
             res (str)
         """
 
-    with wave.open(filepath, "rb") as f:
-        assert f.getnchannels() == 1
-        assert f.getframerate() == self.params.sample_rate
-        length = int(f.getnframes())
-        wav_bytes = f.readframes(length)
+        with wave.open(filepath, "rb") as f:
+            assert f.getnchannels() == 1
+            assert f.getframerate() == self.params.sample_rate
+            length = int(f.getnframes())
+            wav_bytes = f.readframes(length)
 
         return self.model.recognize(wav_bytes, length, nbest)
 
