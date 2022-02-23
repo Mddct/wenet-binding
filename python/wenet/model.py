@@ -42,8 +42,8 @@ class WenetWrapper(object):
         return self.model.recognize(wav_bytes, length, nbest)
 
 
-def load_model(model_dir: str=None,
-               language:  str=None,
+def load_model(model_dir: str,
+               language:  str,
                cache_dir: os.PathLike=pathlib.Path.home()) -> WenetWrapper:
     """
 
