@@ -1,17 +1,16 @@
-from os import path
-from ctypes import cdll
 
-import glob
+from ctypes import cdll
+from os import path
 
 root_path = path.dirname(__file__)
 libs_dirname = path.join(root_path, 'lib')
 
 libs = [
-	"libtorch.so",
-	"libtorch_cpu.so",
-	"libc10.so",
-	"libfst.so.8",
-	"libgomp-a34b3233.so.1",
+    "libtorch.so",
+    "libtorch_cpu.so",
+    "libc10.so",
+    "libfst.so.8",
+    "libgomp-a34b3233.so.1",
 ]
 
 

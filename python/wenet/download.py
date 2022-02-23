@@ -1,9 +1,10 @@
-import tqdm
-import requests
 import io
 import os
-
 import tarfile
+
+import requests
+import tqdm
+
 
 def download(url=None, parent_dir=''):
 
