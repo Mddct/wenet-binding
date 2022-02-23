@@ -44,7 +44,7 @@ class WenetWrapper(object):
 
 def load_model(model_dir: str=None,
                language:  str=None,
-               cache_dir: os.PathLike=pathlib.Path.home()) -> str:
+               cache_dir: os.PathLike=pathlib.Path.home()) -> WenetWrapper:
     """
 
     Args:
