@@ -73,7 +73,7 @@ struct Params {
 };
 
 // for google log init once
-std::once_flag once_nitialized_;
+extern std::once_flag once_nitialized_;
 
 class SimpleAsrModelWrapper {
 public:
