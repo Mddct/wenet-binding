@@ -11,34 +11,34 @@ cParams *wenet_params_init() {
 }
 void wenet_params_free(cParams *cparams) {
   if (cparams == NULL) {
-    return
+    return;
   }
   Params *pp = (Params *)cparams;
   delete pp;
 }
 
-void wenet_params_set_ctc_opts(cParams *pcparam, int blank, int first_beam_size,
+void wenet_params_set_ctc_opts(cParams *pcparm, int blank, int first_beam_size,
                                int second_beam_size) {
-  if (pcparam == NULL) {
+  if (pcparm == NULL) {
     return;
   }
   Params *pp = (Params *)pcparm;
   pp->blank = blank;
   pp->first_beam_size = first_beam_size;
-  pp->seconf_beam_size = second_beam_size;
+  pp->second_beam_size = second_beam_size;
   return;
 }
 void wenet_params_set_wfst_opts(cParams *pcparm, int max_active, int min_active,
                                 int beam, double lattice_beam,
                                 double acoustic_scale, double blank_skip_thresh,
                                 int nbest) {
-  if (pcparam == NULL) {
+  if (pcparm == NULL) {
     return;
   }
   Params *pp = (Params *)pcparm;
-  pp->max_active = blank;
-  pp->min_active = first_beam_size;
-  pp->beam = second_beam_size;
+  pp->max_active = max_active;
+  pp->min_active = min_active;
+  pp->beam = beam;
   pp->lattice_beam = lattice_beam;
   pp->acoustic_scale = acoustic_scale;
   pp->blank_skip_thresh = blank_skip_thresh;
@@ -49,7 +49,7 @@ void wenet_params_set_wfst_opts(cParams *pcparm, int max_active, int min_active,
 void wenet_params_set_decode_opts(cParams *pcparm, int chunk_size,
                                   double ctc_weight, double rescoring_weight,
                                   double reverse_weight) {
-  if (pcparam == NULL) {
+  if (pcparm == NULL) {
     return;
   }
   Params *pp = (Params *)pcparm;
@@ -62,34 +62,34 @@ void wenet_params_set_decode_opts(cParams *pcparm, int chunk_size,
 
 void wenet_params_set_model_opts(cParams *pcparm, char *model_path,
                                  char *dict_path, int num_threads) {
-  if (pcparam == NULL) {
+  if (pcparm == NULL) {
     return;
   }
   Params *pp = (Params *)pcparm;
-  pp->model_path = pcparm;
+  pp->model_path = model_path;
   pp->dict_path = dict_path;
   pp->num_threads = num_threads;
   return;
 }
 
-Model *wenet_init(const cParams *params) {
-  if (params == nullptr) {
+Model *wenet_init(const cParams *pcparm) {
+  if (pcparm == nullptr) {
     return nullptr;
   }
-  Params *pp = (Params *)pcparm;
-  auto Params auto model_ptr = new SimpleAsrModelWrapper(pp);
-  return (Model *)model_ptr;
+  const Params *pp = (Params *)pcparm;
+  auto m = new SimpleAsrModelWrapper(*pp);
+  return (Model *)m;
 }
 void wenet_free(Model *model) {
-  auto model = std::static_cast<SimpleAsrModelWrapper *>(model);
-  delete model;
+  SimpleAsrModelWrapper* m = (SimpleAsrModelWrapper*)model;
+  delete m;
 }
 // caller should call free result
 char *wenet_recognize(Model *model, char *data, int n_samples, int nbest) {
-  auto model = std::static_cast<SimpleAsrModelWrapper *>(model);
-  std::string result(std::move(model->Recognize(data, n_samples, nbest)));
+  SimpleAsrModelWrapper* m = (SimpleAsrModelWrapper*)model;
+  std::string result(std::move(m->Recognize(data, n_samples, nbest)));
   auto cstr = result.c_str();
-  char *res = malloc(result.size());
+  char *res = (char*)malloc(result.size());
   memcpy(res, cstr, result.size());
   return res;
 }
