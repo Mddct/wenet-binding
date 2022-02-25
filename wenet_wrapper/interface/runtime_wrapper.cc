@@ -8,6 +8,8 @@
 
 namespace json = boost::json;
 
+std::once_flag once_nitialized_;
+
 std::shared_ptr<wenet::FeaturePipelineConfig>
 InitFeaturePipelineConfigFromParams(const Params &params) {
   auto feature_config = std::make_shared<wenet::FeaturePipelineConfig>(
