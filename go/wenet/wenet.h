@@ -1,8 +1,6 @@
 #ifndef _WENET_H
 #define _WENET_H
 
-#include "wenet_wrapper/interface/runtime_wrapper.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -27,6 +25,12 @@ void wenet_params_set_wfst_opts(cParams *pcparm, int max_active, int min_active,
 
 void wenet_params_set_model_opts(cParams *pcparm, char *model_path,
                                  char *dict_path, int num_threads);
+
+void wenet_params_set_feature_pipeline_opts(cParams *pcparm, int num_bins,
+                                            int sample_rate);
+void wenet_params_set_decode_opts(cParams *pcparm, int chunk_size,
+                                  double ctc_weight, double rescoring_weight,
+                                  double reverse_weight);
 
 typedef struct model Model;
 Model *wenet_init(const cParams *cparams);

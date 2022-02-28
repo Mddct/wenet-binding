@@ -1,12 +1,15 @@
 #include <stdlib.h>
 
 #include "wenet.h"
+#include "wenet_wrapper/interface/runtime_wrapper.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 cParams *wenet_params_init() {
-  auto params_ptr = new Params();
+  auto params_ptr =
+      new Params("", "", "", 1, "", "", 0.0, 80, 16000, -1, -1, 0.5, 0.5, 0.0,
+                 0, 1.0, 10, 10, 1, 1, 1, 7000, 200, 16, 10, 0, true);
   return (cParams *)params_ptr;
 }
 void wenet_params_free(cParams *cparams) {
@@ -55,7 +58,7 @@ void wenet_params_set_decode_opts(cParams *pcparm, int chunk_size,
   Params *pp = (Params *)pcparm;
   pp->chunk_size = chunk_size;
   pp->ctc_weight = ctc_weight;
-  pp->rescoring_weight = reverse_weight;
+  pp->rescoring_weight = rescoring_weight;
   pp->reverse_weight = reverse_weight;
   return;
 }
@@ -71,6 +74,16 @@ void wenet_params_set_model_opts(cParams *pcparm, char *model_path,
   pp->num_threads = num_threads;
   return;
 }
+void wenet_params_set_feature_pipeline_opts(cParams *pcparm, int num_bins,
+                                            int sample_rate) {
+  if (pcparm == NULL) {
+    return;
+  }
+  Params *pp = (Params *)pcparm;
+  pp->num_bins = num_bins;
+  pp->sample_rate = sample_rate;
+  return;
+}
 
 Model *wenet_init(const cParams *pcparm) {
   if (pcparm == nullptr) {
@@ -81,15 +94,15 @@ Model *wenet_init(const cParams *pcparm) {
   return (Model *)m;
 }
 void wenet_free(Model *model) {
-  SimpleAsrModelWrapper* m = (SimpleAsrModelWrapper*)model;
+  SimpleAsrModelWrapper *m = (SimpleAsrModelWrapper *)model;
   delete m;
 }
 // caller should call free result
 char *wenet_recognize(Model *model, char *data, int n_samples, int nbest) {
-  SimpleAsrModelWrapper* m = (SimpleAsrModelWrapper*)model;
+  SimpleAsrModelWrapper *m = (SimpleAsrModelWrapper *)model;
   std::string result(std::move(m->Recognize(data, n_samples, nbest)));
   auto cstr = result.c_str();
-  char *res = (char*)malloc(result.size());
+  char *res = (char *)malloc(result.size());
   memcpy(res, cstr, result.size());
   return res;
 }
