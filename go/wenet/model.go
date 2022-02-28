@@ -57,6 +57,9 @@ func NewParams(opts ...ParamsOpts) *Params {
 	for _, opt := range opts {
 		opt(p)
 	}
+	runtime.SetFinalizer(p, func(p *Params) {
+		C.wenet_params_free(p.params)
+	})
 	return p
 }
 
