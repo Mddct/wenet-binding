@@ -7,3 +7,4 @@ wenet python wrapper for runtime
 - [x] download model and model dir
 - [x] offline go binding
 - [ ] github action many linux
+- [ ] exception
