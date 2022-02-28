@@ -8,3 +8,4 @@ wenet python wrapper for runtime
 - [x] offline go binding
 - [ ] github action many linux
 - [ ] exception
+- [ ] asynchronous for streamming decoding
