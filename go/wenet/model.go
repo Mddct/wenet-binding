@@ -176,12 +176,12 @@ type StreammingAsrDecoder struct {
 }
 
 func NewStreammingAsrDecoder(samwp *SimpleAsrModelWrapper, nbest int, continuous_decoding bool) *StreammingAsrDecoder {
-	if samwp == nil{
+	if samwp == nil {
 		return nil
 	}
 	cd := 0
-	if continuous_decoding{	
-		cd = 1	
+	if continuous_decoding {
+		cd = 1
 	}
 	d := C.streamming_decoder_init(
 		samwp.inst,
@@ -199,18 +199,15 @@ func NewStreammingAsrDecoder(samwp *SimpleAsrModelWrapper, nbest int, continuous
 	runtime.SetFinalizer(decoder, free)
 
 	go func() {
-		prevRes := ""
 		for {
 			curResCstr := C.streamming_decoder_get_instance_result(decoder.decoder)
 			curRes := C.GoString(curResCstr)
 			C.free(unsafe.Pointer(curResCstr))
 
-			if prevRes != curRes {
-				resultChan <- curRes
-				prevRes = curRes
-			}
+			resultChan <- curRes
+			prevRes = curRes
 			finished := int(C.streamming_decoder_is_end(decoder.decoder))
-			if finished == 1 {
+			if finished != 0 {
 				break
 			}
 		}
@@ -225,7 +222,7 @@ func (sad *StreammingAsrDecoder) AcceptWaveform(pcm []byte, final bool) {
 	cBytes := C.CBytes(pcm)
 	defer C.free(cBytes)
 	cfinal := 0
-	if final{
+	if final {
 		cfinal = 1
 	}
 	C.streamming_decoder_accept_waveform(
@@ -235,4 +232,3 @@ func (sad *StreammingAsrDecoder) AcceptWaveform(pcm []byte, final bool) {
 		C.int(cfinal),
 	)
 }
-

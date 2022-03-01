@@ -200,28 +200,38 @@ void StreammingAsrWrapper::DecodeThreadFunc(int nbest) {
     if (state == wenet::DecodeState::kEndFeats) {
       decoder_->Rescoring();
       std::string result = SerializeResult(decoder_->result(), true, nbest);
-      std::lock_guard<std::mutex> lock(result_mutex_);
-      result_ = std::move(result);
+      {
+        std::lock_guard<std::mutex> lock(result_mutex_);
+        result_ = std::move(result);
+      }
+      has_result_.notify_one();
       stop_recognition_ = true;
       break;
     } else if (state == wenet::DecodeState::kEndpoint) {
       decoder_->Rescoring();
       std::string result = SerializeResult(decoder_->result(), true, nbest);
-      std::lock_guard<std::mutex> lock(result_mutex_);
-      result_ = std::move(result);
+      {
+        std::lock_guard<std::mutex> lock(result_mutex_);
+        result_ = std::move(result);
+      }
       // If it's not continuous decoidng, continue to do next recognition
-      // otherwise stop the recognition
+      has_result_.notify_one();
       if (continuous_decoding_) {
         decoder_->ResetContinuousDecoding();
       } else {
         stop_recognition_ = true;
         break;
       }
+
+      // otherwise stop the recognition
     } else {
       if (decoder_->DecodedSomething()) {
         std::string result = SerializeResult(decoder_->result(), false, 1);
-        std::lock_guard<std::mutex> lock(result_mutex_);
-        result_ = std::move(result);
+        {
+          std::lock_guard<std::mutex> lock(result_mutex_);
+          result_ = std::move(result);
+        }
+        has_result_.notify_one();
       }
     }
   }
@@ -256,4 +266,19 @@ void StreammingAsrWrapper::Reset(int nbest, bool continuous_decoding) {
 
   decode_thread_ = std::make_unique<std::thread>(
       &StreammingAsrWrapper::DecodeThreadFunc, this, nbest);
+}
+
+std::string StreammingAsrWrapper::GetInstanceResult() {
+  std::string txt;
+
+  {
+    std::unique_lock<std::mutex> lock(result_mutex_);
+    while (result_.empty()) {
+      has_result_.wait(lock);
+    }
+    txt = result_;
+    result_.clear();
+  }
+
+  return txt;
 }

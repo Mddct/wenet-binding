@@ -121,7 +121,7 @@ public:
   // caller: onethread call accept wavform
   // another call GetInstanceResult and check IsEnd
   void AccepAcceptWaveform(char *pcm, int num_samples, bool final);
-  std::string GetInstanceResult() { return result_; }
+  std::string GetInstanceResult();
   bool IsEnd() { return stop_recognition_; }
 
   // reset for new utterance
@@ -146,7 +146,8 @@ private:
 
   // instant results, Channels should be used here but locks are used for
   // simplicity
+  mutable std::mutex result_mutex_;
+  std::condition_variable has_result_;
   std::string result_;
-  std::mutex result_mutex_;
 };
 #endif // WENET_PYTHON_LIB_H_
