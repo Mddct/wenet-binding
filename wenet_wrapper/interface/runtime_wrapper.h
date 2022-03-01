@@ -83,6 +83,12 @@ public:
   SimpleAsrModelWrapper(const Params &params);
   std::string Recognize(char *pcm, int num_sampleds, int n_best = 1);
 
+  std::shared_ptr<wenet::FeaturePipelineConfig> feature_config(){
+      return feature_config_};
+  std::shared_ptr<wenet::DecodeOptions> decode_config(){return decode_config_};
+  std::shared_ptr<wenet::DecodeResource> decode_resource(){
+      return decode_resource_};
+
 private:
   std::shared_ptr<wenet::FeaturePipelineConfig> feature_config_;
   std::shared_ptr<wenet::DecodeOptions> decode_config_;
@@ -92,15 +98,16 @@ private:
 class StreammingAsrWrapper {
 public:
   StreammingAsrWrapper(std::shared_ptr<const SimpleAsrModelWrapper> model,
-                       int nbest = 1)
+                       int nbest = 1, bool continuous_decoding = false)
       : model_(model),
-        feature_pipeline_(
-            std::make_shared<wenet::FeaturePipeline>(*model_->feature_config_)),
+        feature_pipeline_(std::make_shared<wenet::FeaturePipeline>(
+            *model_->feature_config())),
         decoder_(std::make_shared<wenet::TorchAsrDecoder>(
-            feature_pipeline_, model_->decode_resource_,
-            *model_->decode_config_)),
+            feature_pipeline_, model_->decode_resource(),
+            *model_->decode_config())),
         decode_thread_(std::make_unique<std::thread>(
-            &StreammingAsrWrapper::DecodeThreadFunc, this, nbest)) {}
+            &StreammingAsrWrapper::DecodeThreadFunc, this, nbest)),
+        continuous_decoding_(continuous_decoding) {}
 
   ~StreammingAsrWrapper() {
     if (decode_thread_->joinable()) {
@@ -111,17 +118,16 @@ public:
   // another call GetInstanceResult and check IsEnd
   void AccepAcceptWaveform(char *pcm, int num_samples, bool final);
   std::string GetInstanceResult() { return result_; }
-  std::string IsEnd() { return stop_recognition_; }
+  bool IsEnd() { return stop_recognition_; }
 
   // reset for new utterance
-  void Reset(int nbest = 1);
+  void Reset(int nbest = 1, bool continuous_decoding = false);
 
 private:
   void DecodeThreadFunc(int nbest);
-  std::shared_ptr<const WenetSTTModel> model_;
+  std::shared_ptr<const SimpleAsrModelWrapper> model_;
   std::shared_ptr<wenet::FeaturePipeline> feature_pipeline_;
   std::shared_ptr<wenet::TorchAsrDecoder> decoder_;
-  std::unique_ptr<std::thread> decode_thread_;
 
   // decode thread for seperate decoding
   std::unique_ptr<std::thread> decode_thread_;
@@ -130,8 +136,6 @@ private:
   // continuous decoding
   bool continuous_decoding_;
   // start and end signal, caller should set start and end_, no mutex needed
-  bool start_;
-  bool end_;
   // model detect feature pipeline finished or  end_ is true
   bool stop_recognition_;
 

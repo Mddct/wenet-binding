@@ -245,13 +245,15 @@ void StreammingAsrWrapper::AcceptWaveform(char *pcm, int num_samples,
   }
 }
 
-void StreammingAsrWrapper::Reset(int nbest) {
+void StreammingAsrWrapper::Reset(int nbest, bool continuous_decoding) {
   stop_recognition_ = false;
   result_.clear();
   feature_pipeline_->Reset();
   decoder_->Reset();
   CHECK(!decode_thread_->joinable());
 
+  continuous_decoding_ = continuous_decoding;
+
   decode_thread_ = std::make_unique<std::thread>(
-      &WenetSTTDecoder::DecodeThreadFunc, this, nbest);
+      &WenetSTTDecoder::DecodeThreadFunc, this, nbest, continuous_decoding);
 }
