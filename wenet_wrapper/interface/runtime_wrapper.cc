@@ -8,6 +8,31 @@
 
 namespace json = boost::json;
 
+// serialize Decode Result, this function should be in Decode
+std::string SerializeResult(std::vector<wenet::DecodeResult> &results,
+                            bool finish, int nbest) {
+  json::array nbest;
+  for (const DecodeResult &path : results) {
+    json::object jpath({{"sentence", path.sentence}});
+    if (finish) {
+      json::array word_pieces;
+      for (const WordPiece &word_piece : path.word_pieces) {
+        json::object jword_piece({{"word", word_piece.word},
+                                  {"start", word_piece.start},
+                                  {"end", word_piece.end}});
+        word_pieces.emplace_back(jword_piece);
+      }
+      jpath.emplace("word_pieces", word_pieces);
+    }
+    nbest.emplace_back(jpath);
+
+    if (nbest.size() == nbest_) {
+      break;
+    }
+  }
+  return json::serialize(nbest);
+}
+
 std::once_flag once_nitialized_;
 
 std::shared_ptr<wenet::FeaturePipelineConfig>
@@ -140,28 +165,93 @@ std::string SimpleAsrModelWrapper::Recognize(char *pcm, int num_samples,
     }
   }
 
-  // TODO: n-best result string return
-  std::string n_best_result;
   if (decoder.DecodedSomething()) {
-    json::array nbests;
-    for (auto &path : decoder.result()) {
-      json::object jpath({{"sentence", path.sentence}});
-      json::array word_pieces;
-      for (auto &word_piece : path.word_pieces) {
-        json::object jword_piece({{"word", word_piece.word},
-                                  {"start", word_piece.start},
-                                  {"end", word_piece.end}});
-        word_pieces.emplace_back(jword_piece);
-      }
-      jpath.emplace("word_pieces", word_pieces);
+    return SerializeResult(decoder->result(), true, nbest)
+  }
+  return std::string();
+  // std::string n_best_result;
+  // if (decoder.DecodedSomething()) {
+  //   json::array nbests;
+  //   for (auto &path : decoder.result()) {
+  //     json::object jpath({{"sentence", path.sentence}});
+  //     json::array word_pieces;
+  //     for (auto &word_piece : path.word_pieces) {
+  //       json::object jword_piece({{"word", word_piece.word},
+  //                                 {"start", word_piece.start},
+  //                                 {"end", word_piece.end}});
+  //       word_pieces.emplace_back(jword_piece);
+  //     }
+  //     jpath.emplace("word_pieces", word_pieces);
 
-      nbests.emplace_back(jpath);
+  //     nbests.emplace_back(jpath);
 
-      if (nbests.size() == nbest) {
+  //     if (nbests.size() == nbest) {
+  //       break;
+  //     }
+  //   }
+  //   n_best_result = json::serialize(nbests);
+  // }
+  // return n_best_result;
+}
+
+void StreammingAsrWrapper::DecodeThreadFunc(int nbest) {
+  while (true) {
+    auto state = decoder_->Decode();
+    if (state == wenet::DecodeState::kEndFeats) {
+      decoder_->Rescoring();
+      std::string result = SerializeResult(decoder_->result(), true, nbest);
+      std::lock_guard<std::mutex> lock(result_mutex_);
+      result_ = std::move(result);
+      stop_recognition_ = true;
+      break;
+    } else if (state == wenet::DecodeState::kEndpoint) {
+      decoder_->Rescoring();
+      std::string result = SerializeResult(decoder_->result(), true, nbest);
+      std::lock_guard<std::mutex> lock(result_mutex_);
+      result_ = std::move(result);
+      // If it's not continuous decoidng, continue to do next recognition
+      // otherwise stop the recognition
+      if (continuous_decoding_) {
+        decoder_->ResetContinuousDecoding();
+      } else {
+        stop_recognition_ = true;
         break;
       }
+    } else {
+      if (decoder_->DecodedSomething()) {
+        std::string result = SerializeResult(decoder_->result(), false, 1);
+        std::lock_guard<std::mutex> lock(result_mutex_);
+        result_ = std::move(result);
+      }
     }
-    n_best_result = json::serialize(nbests);
   }
-  return n_best_result;
+}
+
+void StreammingAsrWrapper::AcceptWaveform(char *pcm, int num_samples,
+                                          bool final) {
+  if (pcm == nullptr || num_samples == 0) {
+    return
+  }
+  // bytes to wavform
+  std::vector<float> pcm_data(num_samples);
+  const int16_t *pdata = reinterpret_cast<const int16_t *>(pcm);
+  for (int i = 0; i < num_samples; i++) {
+    pcm_data[i] = static_cast<float>(*pdata);
+    pdata++;
+  }
+  feature_pipeline_->AcceptWaveform(pcm_data);
+  if (final) {
+    feature_pipeline_->set_input_finished();
+  }
+}
+
+void StreammingAsrWrapper::Reset(int nbest) {
+  stop_recognition_ = false;
+  result_.clear();
+  feature_pipeline_->Reset();
+  decoder_->Reset();
+  CHECK(!decode_thread_->joinable());
+
+  decode_thread_ = std::make_unique<std::thread>(
+      &WenetSTTDecoder::DecodeThreadFunc, this, nbest);
 }

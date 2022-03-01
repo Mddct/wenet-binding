@@ -1,6 +1,9 @@
 #ifndef WENET_PYTHON_LIB_H_
 #define WENET_PYTHON_LIB_H_
 
+#include <mutex>
+#include <thread>
+
 #include "decoder/torch_asr_decoder.h"
 #include "utils/utils.h"
 
@@ -84,7 +87,57 @@ private:
   std::shared_ptr<wenet::FeaturePipelineConfig> feature_config_;
   std::shared_ptr<wenet::DecodeOptions> decode_config_;
   std::shared_ptr<wenet::DecodeResource> decode_resource_;
-
 };
 
+class StreammingAsrWrapper {
+public:
+  StreammingAsrWrapper(std::shared_ptr<const SimpleAsrModelWrapper> model,
+                       int nbest = 1)
+      : model_(model),
+        feature_pipeline_(
+            std::make_shared<wenet::FeaturePipeline>(*model_->feature_config_)),
+        decoder_(std::make_shared<wenet::TorchAsrDecoder>(
+            feature_pipeline_, model_->decode_resource_,
+            *model_->decode_config_)),
+        decode_thread_(std::make_unique<std::thread>(
+            &StreammingAsrWrapper::DecodeThreadFunc, this, nbest)) {}
+
+  ~StreammingAsrWrapper() {
+    if (decode_thread_->joinable()) {
+      decode_thread_->join();
+    }
+  }
+  // caller: onethread call accept wavform
+  // another call GetInstanceResult and check IsEnd
+  void AccepAcceptWaveform(char *pcm, int num_samples, bool final);
+  std::string GetInstanceResult() { return result_; }
+  std::string IsEnd() { return stop_recognition_; }
+
+  // reset for new utterance
+  void Reset(int nbest = 1);
+
+private:
+  void DecodeThreadFunc(int nbest);
+  std::shared_ptr<const WenetSTTModel> model_;
+  std::shared_ptr<wenet::FeaturePipeline> feature_pipeline_;
+  std::shared_ptr<wenet::TorchAsrDecoder> decoder_;
+  std::unique_ptr<std::thread> decode_thread_;
+
+  // decode thread for seperate decoding
+  std::unique_ptr<std::thread> decode_thread_;
+
+  // contronl decoding opts
+  // continuous decoding
+  bool continuous_decoding_;
+  // start and end signal, caller should set start and end_, no mutex needed
+  bool start_;
+  bool end_;
+  // model detect feature pipeline finished or  end_ is true
+  bool stop_recognition_;
+
+  // instant results, Channels should be used here but locks are used for
+  // simplicity
+  std::string result_;
+  std::mutex result_mutex_;
+};
 #endif // WENET_PYTHON_LIB_H_
