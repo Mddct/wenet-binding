@@ -167,3 +167,72 @@ func (samw *SimpleAsrModelWrapper) Recognize(pcm []byte, nbest int) string {
 	defer C.free(unsafe.Pointer(res))
 	return C.GoString(res)
 }
+
+type StreammingAsrDecoder struct {
+	decoder *C.struct_streamming_decoder
+
+	// caller get decoding result from chan
+	Result <-chan string
+}
+
+func NewStreammingAsrDecoder(samwp *SimpleAsrModelWrapper, nbest int, continuous_decoding bool) *StreammingAsrDecoder {
+	if samwp == nil{
+		return nil
+	}
+	cd := 0
+	if continuous_decoding{	
+		cd = 1	
+	}
+	d := C.streamming_decoder_init(
+		samwp.inst,
+		C.int(nbest),
+		C.int(cd),
+	)
+	free := func(decoder *StreammingAsrDecoder) {
+		C.streamming_decoder_free(decoder.decoder)
+	}
+	resultChan := make(chan string)
+	decoder := &StreammingAsrDecoder{
+		decoder: d,
+		Result:  resultChan,
+	}
+	runtime.SetFinalizer(decoder, free)
+
+	go func() {
+		prevRes := ""
+		for {
+			curResCstr := C.streamming_decoder_get_instance_result(decoder.decoder)
+			curRes := C.GoString(curResCstr)
+			C.free(unsafe.Pointer(curResCstr))
+
+			if prevRes != curRes {
+				resultChan <- curRes
+				prevRes = curRes
+			}
+			finished := int(C.streamming_decoder_is_end(decoder.decoder))
+			if finished == 1 {
+				break
+			}
+		}
+	}()
+	return decoder
+}
+
+func (sad *StreammingAsrDecoder) AcceptWaveform(pcm []byte, final bool) {
+	if len(pcm) == 0 {
+		return
+	}
+	cBytes := C.CBytes(pcm)
+	defer C.free(cBytes)
+	cfinal := 0
+	if final{
+		cfinal = 1
+	}
+	C.streamming_decoder_accept_waveform(
+		sad.decoder,
+		(*C.char)(cBytes),
+		C.int(len(pcm)/2),
+		C.int(cfinal),
+	)
+}
+
