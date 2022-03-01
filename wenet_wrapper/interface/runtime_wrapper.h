@@ -83,11 +83,15 @@ public:
   SimpleAsrModelWrapper(const Params &params);
   std::string Recognize(char *pcm, int num_sampleds, int n_best = 1);
 
-  std::shared_ptr<wenet::FeaturePipelineConfig> feature_config(){
-      return feature_config_};
-  std::shared_ptr<wenet::DecodeOptions> decode_config(){return decode_config_};
-  std::shared_ptr<wenet::DecodeResource> decode_resource(){
-      return decode_resource_};
+  std::shared_ptr<wenet::FeaturePipelineConfig> feature_config() {
+    return feature_config_;
+  }
+  std::shared_ptr<wenet::DecodeOptions> decode_config() {
+    return decode_config_;
+  }
+  std::shared_ptr<wenet::DecodeResource> decode_resource() {
+    return decode_resource_;
+  }
 
 private:
   std::shared_ptr<wenet::FeaturePipelineConfig> feature_config_;
@@ -97,7 +101,7 @@ private:
 
 class StreammingAsrWrapper {
 public:
-  StreammingAsrWrapper(std::shared_ptr<const SimpleAsrModelWrapper> model,
+  StreammingAsrWrapper(std::shared_ptr<SimpleAsrModelWrapper> model,
                        int nbest = 1, bool continuous_decoding = false)
       : model_(model),
         feature_pipeline_(std::make_shared<wenet::FeaturePipeline>(
@@ -125,7 +129,8 @@ public:
 
 private:
   void DecodeThreadFunc(int nbest);
-  std::shared_ptr<const SimpleAsrModelWrapper> model_;
+
+  std::shared_ptr<SimpleAsrModelWrapper> model_;
   std::shared_ptr<wenet::FeaturePipeline> feature_pipeline_;
   std::shared_ptr<wenet::TorchAsrDecoder> decoder_;
 

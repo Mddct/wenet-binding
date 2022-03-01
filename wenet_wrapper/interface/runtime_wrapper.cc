@@ -9,14 +9,14 @@
 namespace json = boost::json;
 
 // serialize Decode Result, this function should be in Decode
-std::string SerializeResult(std::vector<wenet::DecodeResult> &results,
-                            bool finish, int nbest) {
+std::string SerializeResult(const std::vector<wenet::DecodeResult> &results,
+                            bool finish, int n = 1) {
   json::array nbest;
-  for (const DecodeResult &path : results) {
+  for (auto &path : results) {
     json::object jpath({{"sentence", path.sentence}});
     if (finish) {
       json::array word_pieces;
-      for (const WordPiece &word_piece : path.word_pieces) {
+      for (auto &word_piece : path.word_pieces) {
         json::object jword_piece({{"word", word_piece.word},
                                   {"start", word_piece.start},
                                   {"end", word_piece.end}});
@@ -26,7 +26,7 @@ std::string SerializeResult(std::vector<wenet::DecodeResult> &results,
     }
     nbest.emplace_back(jpath);
 
-    if (nbest.size() == nbest_) {
+    if (nbest.size() == n) {
       break;
     }
   }
@@ -166,7 +166,7 @@ std::string SimpleAsrModelWrapper::Recognize(char *pcm, int num_samples,
   }
 
   if (decoder.DecodedSomething()) {
-    return SerializeResult(decoder->result(), true, nbest)
+    return SerializeResult(decoder.result(), true, nbest);
   }
   return std::string();
   // std::string n_best_result;
@@ -199,7 +199,7 @@ void StreammingAsrWrapper::DecodeThreadFunc(int nbest) {
     auto state = decoder_->Decode();
     if (state == wenet::DecodeState::kEndFeats) {
       decoder_->Rescoring();
-      std::string result = SerializeResult(decoder_->result(), true, nbest);
+      std::string result = SerializeResult(decoder->result(), true, nbest);
       std::lock_guard<std::mutex> lock(result_mutex_);
       result_ = std::move(result);
       stop_recognition_ = true;
@@ -227,10 +227,10 @@ void StreammingAsrWrapper::DecodeThreadFunc(int nbest) {
   }
 }
 
-void StreammingAsrWrapper::AcceptWaveform(char *pcm, int num_samples,
-                                          bool final) {
+void StreammingAsrWrapper::AccepAcceptWaveform(char *pcm, int num_samples,
+                                               bool final) {
   if (pcm == nullptr || num_samples == 0) {
-    return
+    return;
   }
   // bytes to wavform
   std::vector<float> pcm_data(num_samples);
@@ -255,5 +255,5 @@ void StreammingAsrWrapper::Reset(int nbest, bool continuous_decoding) {
   continuous_decoding_ = continuous_decoding;
 
   decode_thread_ = std::make_unique<std::thread>(
-      &WenetSTTDecoder::DecodeThreadFunc, this, nbest, continuous_decoding);
+      &StreammingAsrWrapper::DecodeThreadFunc, this, nbest);
 }
