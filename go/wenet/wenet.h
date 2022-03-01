@@ -37,6 +37,19 @@ Model *wenet_init(const cParams *cparams);
 void wenet_free(Model *model);
 // caller should cal free
 char *wenet_recognize(Model *model, char *data, int n_samples, int nbest);
+
+typedef struct streamming_decoder StreammingDecoder;
+StreammingDecoder *streamming_decoder_init(Model *model, int nbest,
+                                           int continuous_decoding);
+void streamming_decoder_free(StreammingDecoder *decoder);
+void streamming_decoder_accept_waveform(StreammingDecoder *decoder, char *pcm,
+                                        int num_samples, int final);
+// caller responsebile free result
+char *streamming_decoder_get_instance_result(StreammingDecoder *decoder);
+int streamming_decoder_is_end(StreammingDecoder *decoder);
+void streamming_decoder_reset(StreammingDecoder *decoder, int nbest,
+                              int continuous_decoding);
+
 #ifdef __cplusplus
 }
 #endif

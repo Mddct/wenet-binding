@@ -94,6 +94,9 @@ Model *wenet_init(const cParams *pcparm) {
   return (Model *)m;
 }
 void wenet_free(Model *model) {
+  if (model == nullptr) {
+    return;
+  }
   SimpleAsrModelWrapper *m = (SimpleAsrModelWrapper *)model;
   delete m;
 }
@@ -105,6 +108,62 @@ char *wenet_recognize(Model *model, char *data, int n_samples, int nbest) {
   char *res = (char *)malloc(result.size());
   memcpy(res, cstr, result.size());
   return res;
+}
+
+StreammingDecoder *streamming_decoder_init(Model *model, int nbest,
+                                           int continuous_decoding) {
+  if (model == nullptr) {
+    return nullptr;
+  }
+  auto m = std::shared_ptr<SimpleAsrModelWrapper>(
+      reinterpret_cast<SimpleAsrModelWrapper *>(model));
+  auto decoder = new StreammingAsrWrapper(m, nbest, bool(continuous_decoding));
+  return (StreammingDecoder *)decoder;
+}
+void streamming_decoder_free(StreammingDecoder *decoder) {
+  if (decoder == nullptr) {
+    return;
+  }
+  StreammingAsrWrapper *d = (StreammingAsrWrapper *)decoder;
+  delete d;
+  return;
+}
+void streamming_decoder_accept_waveform(StreammingDecoder *decoder, char *pcm,
+                                        int num_samples, int final) {
+  if (decoder == nullptr) {
+    return;
+  }
+  StreammingAsrWrapper *d = (StreammingAsrWrapper *)decoder;
+  d->AccepAcceptWaveform(pcm, num_samples, final);
+  return;
+}
+// caller responsebile free result
+char *streamming_decoder_get_instance_result(StreammingDecoder *decoder) {
+  if (decoder == nullptr) {
+    return nullptr;
+  }
+  StreammingAsrWrapper *d = (StreammingAsrWrapper *)decoder;
+  std::string result(std::move(d->GetInstanceResult()));
+  auto cstr = result.c_str();
+  char *res = (char *)malloc(result.size());
+  memcpy(res, cstr, result.size());
+  return res;
+}
+int streamming_decoder_is_end(StreammingDecoder *decoder) {
+  if (decoder == nullptr) {
+    return 0;
+  }
+  StreammingAsrWrapper *d = (StreammingAsrWrapper *)decoder;
+  return int(d->IsEnd());
+}
+void streamming_decoder_reset(StreammingDecoder *decoder, int nbest,
+                              int continuous_decoding) {
+  if (decoder == nullptr) {
+    return;
+  }
+  StreammingAsrWrapper *d = (StreammingAsrWrapper *)decoder;
+  d->Reset(nbest, bool(continuous_decoding));
+  return;
 }
 
 #ifdef __cplusplus
