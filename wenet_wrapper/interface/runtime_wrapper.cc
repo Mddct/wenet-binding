@@ -199,7 +199,7 @@ void StreammingAsrWrapper::DecodeThreadFunc(int nbest) {
     auto state = decoder_->Decode();
     if (state == wenet::DecodeState::kEndFeats) {
       decoder_->Rescoring();
-      std::string result = SerializeResult(decoder->result(), true, nbest);
+      std::string result = SerializeResult(decoder_->result(), true, nbest);
       std::lock_guard<std::mutex> lock(result_mutex_);
       result_ = std::move(result);
       stop_recognition_ = true;
