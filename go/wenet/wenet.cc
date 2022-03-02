@@ -138,23 +138,20 @@ void streamming_decoder_accept_waveform(StreammingDecoder *decoder, char *pcm,
   return;
 }
 // caller responsebile free result
-char *streamming_decoder_get_instance_result(StreammingDecoder *decoder) {
-  if (decoder == nullptr) {
-    return nullptr;
+int streamming_decoder_get_instance_result(StreammingDecoder *decoder,
+                                           char **text) {
+  if (decoder == nullptr || text == nullptr) {
+    return 1;
   }
   StreammingAsrWrapper *d = (StreammingAsrWrapper *)decoder;
-  std::string result(std::move(d->GetInstanceResult()));
+  std::string result;
+  bool is_final = d->GetInstanceResult(result);
+
   auto cstr = result.c_str();
   char *res = (char *)malloc(result.size());
   memcpy(res, cstr, result.size());
-  return res;
-}
-int streamming_decoder_is_end(StreammingDecoder *decoder) {
-  if (decoder == nullptr) {
-    return 0;
-  }
-  StreammingAsrWrapper *d = (StreammingAsrWrapper *)decoder;
-  return int(d->IsEnd());
+  *text = res;
+  return (int)is_final;
 }
 void streamming_decoder_reset(StreammingDecoder *decoder, int nbest,
                               int continuous_decoding) {

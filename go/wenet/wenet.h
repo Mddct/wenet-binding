@@ -44,9 +44,9 @@ StreammingDecoder *streamming_decoder_init(Model *model, int nbest,
 void streamming_decoder_free(StreammingDecoder *decoder);
 void streamming_decoder_accept_waveform(StreammingDecoder *decoder, char *pcm,
                                         int num_samples, int final);
-// caller responsebile free result
-char *streamming_decoder_get_instance_result(StreammingDecoder *decoder);
-int streamming_decoder_is_end(StreammingDecoder *decoder);
+// caller responsebile free text
+int streamming_decoder_get_instance_result(StreammingDecoder *decoder,
+                                           char **text);
 void streamming_decoder_reset(StreammingDecoder *decoder, int nbest,
                               int continuous_decoding);
 

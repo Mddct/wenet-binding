@@ -173,7 +173,6 @@ type StreammingAsrDecoder struct {
 
 	// caller get decoding result from chan
 	Result <-chan string
-	Done   <-chan struct{}
 }
 
 func NewStreammingAsrDecoder(samwp *SimpleAsrModelWrapper, nbest int, continuous_decoding bool) *StreammingAsrDecoder {
@@ -200,15 +199,15 @@ func NewStreammingAsrDecoder(samwp *SimpleAsrModelWrapper, nbest int, continuous
 	runtime.SetFinalizer(decoder, free)
 
 	go func() {
+		var curResCstr *C.char
 		for {
-			curResCstr := C.streamming_decoder_get_instance_result(decoder.decoder)
+			finish := int(C.streamming_decoder_get_instance_result(decoder.decoder, &curResCstr))
 			curRes := C.GoString(curResCstr)
 			C.free(unsafe.Pointer(curResCstr))
 
 			resultChan <- curRes
-			finished := int(C.streamming_decoder_is_end(decoder.decoder))
 			if finished != 0 {
-				decoder.Done <- struct{}{}
+				close(resultChan)
 				break
 			}
 		}

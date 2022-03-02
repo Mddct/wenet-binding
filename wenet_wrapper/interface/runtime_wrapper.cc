@@ -203,9 +203,9 @@ void StreammingAsrWrapper::DecodeThreadFunc(int nbest) {
       {
         std::lock_guard<std::mutex> lock(result_mutex_);
         result_ = std::move(result);
+        stop_recognition_ = true;
       }
       has_result_.notify_one();
-      stop_recognition_ = true;
       break;
     } else if (state == wenet::DecodeState::kEndpoint) {
       decoder_->Rescoring();
@@ -213,18 +213,18 @@ void StreammingAsrWrapper::DecodeThreadFunc(int nbest) {
       {
         std::lock_guard<std::mutex> lock(result_mutex_);
         result_ = std::move(result);
+        if (continuous_decoding_) {
+          decoder_->ResetContinuousDecoding();
+        } else {
+          stop_recognition_ = true;
+          break;
+        }
       }
       // If it's not continuous decoidng, continue to do next recognition
       has_result_.notify_one();
-      if (continuous_decoding_) {
-        decoder_->ResetContinuousDecoding();
-      } else {
-        stop_recognition_ = true;
-        break;
-      }
-
       // otherwise stop the recognition
     } else {
+      stop_recognition_ = true;
       if (decoder_->DecodedSomething()) {
         std::string result = SerializeResult(decoder_->result(), false, 1);
         {
@@ -268,17 +268,25 @@ void StreammingAsrWrapper::Reset(int nbest, bool continuous_decoding) {
       &StreammingAsrWrapper::DecodeThreadFunc, this, nbest);
 }
 
-std::string StreammingAsrWrapper::GetInstanceResult() {
-  std::string txt;
-
+bool StreammingAsrWrapper::GetInstanceResult(std::string &result) {
+  bool is_final = false;
   {
     std::unique_lock<std::mutex> lock(result_mutex_);
-    while (result_.empty()) {
-      has_result_.wait(lock);
-    }
-    txt = result_;
-    result_.clear();
-  }
+    if (!result_.empty()) {
+      result = result_;
+      is_final = stop_recognition_;
 
-  return txt;
+      result_.clear();
+      return is_final;
+    } else {
+      while (result_.empty()) {
+        has_result_.wait(lock);
+        result = result_;
+        is_final = stop_recognition_;
+        break;
+      }
+      result_.clear();
+    }
+  }
+  return is_final;
 }

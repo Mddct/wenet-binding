@@ -121,8 +121,8 @@ public:
   // caller: onethread call accept wavform
   // another call GetInstanceResult and check IsEnd
   void AccepAcceptWaveform(char *pcm, int num_samples, bool final);
-  std::string GetInstanceResult();
-  bool IsEnd() { return stop_recognition_; }
+  // decoder set current result , and return if it final
+  bool GetInstanceResult(std::string &result);
 
   // reset for new utterance
   void Reset(int nbest = 1, bool continuous_decoding = false);
