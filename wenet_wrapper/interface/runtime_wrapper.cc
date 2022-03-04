@@ -206,7 +206,6 @@ void StreammingAsrWrapper::DecodeThreadFunc(int nbest) {
         stop_recognition_ = true;
       }
       has_result_.notify_one();
-      std::cout << "i'm out" << std::endl;
       break;
     } else if (state == wenet::DecodeState::kEndpoint) {
       decoder_->Rescoring();
@@ -226,7 +225,7 @@ void StreammingAsrWrapper::DecodeThreadFunc(int nbest) {
       has_result_.notify_one();
       // otherwise stop the recognition
     } else {
-      stop_recognition_ = true;
+      stop_recognition_ = false;
       if (decoder_->DecodedSomething()) {
         std::string result = SerializeResult(decoder_->result(), false, 1);
         {
@@ -258,19 +257,19 @@ void StreammingAsrWrapper::AccepAcceptWaveform(char *pcm, int num_samples,
 }
 
 void StreammingAsrWrapper::Reset(int nbest, bool continuous_decoding) {
+  CHECK(!decode_thread_->joinable());
+  continuous_decoding_ = continuous_decoding;
   stop_recognition_ = false;
   result_.clear();
   feature_pipeline_->Reset();
   decoder_->Reset();
-  CHECK(!decode_thread_->joinable());
-
-  continuous_decoding_ = continuous_decoding;
 
   decode_thread_ = std::make_unique<std::thread>(
       &StreammingAsrWrapper::DecodeThreadFunc, this, nbest);
 }
 
 bool StreammingAsrWrapper::GetInstanceResult(std::string &result) {
+  CHECK(!decode_thread_->joinable());
   bool is_final = false;
   {
     std::unique_lock<std::mutex> lock(result_mutex_);

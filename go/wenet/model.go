@@ -27,8 +27,9 @@ func Load(modelDir string) (*SimpleAsrModelWrapper, error) {
 	// feature pipeline opts
 	fpopts := WithFeaturePipeline(80, 16000)
 	modelopts := WithModel(zip, dict, 1)
+	decodeopts := WithDecodeOpts(16, 0.5, 0.5, 0)
 
-	p := NewParams(ctcopts, fpopts, modelopts)
+	p := NewParams(ctcopts, fpopts, modelopts, decodeopts)
 	return New(p), nil
 }
 
@@ -191,28 +192,31 @@ func NewStreammingAsrDecoder(samwp *SimpleAsrModelWrapper, nbest int, continuous
 	free := func(decoder *StreammingAsrDecoder) {
 		C.streamming_decoder_free(decoder.decoder)
 	}
-	resultChan := make(chan string)
 	decoder := &StreammingAsrDecoder{
 		decoder: d,
-		Result:  resultChan,
 	}
 	runtime.SetFinalizer(decoder, free)
 
-	go func() {
-		var curResCstr *C.char
-		for {
-			finish := int(C.streamming_decoder_get_instance_result(decoder.decoder, &curResCstr))
-			curRes := C.GoString(curResCstr)
-			C.free(unsafe.Pointer(curResCstr))
-
-			resultChan <- curRes
-			if finished != 0 {
-				close(resultChan)
-				break
-			}
-		}
-	}()
+	go decoder.asyncAsrRes()
 	return decoder
+}
+
+func (sad *StreammingAsrDecoder) asyncAsrRes() {
+	resultChan := make(chan string)
+	sad.Result = resultChan
+	var curResCstr *C.char
+	for {
+		finish := int(C.streamming_decoder_get_instance_result(sad.decoder, &curResCstr))
+		curRes := C.GoString(curResCstr)
+		C.free(unsafe.Pointer(curResCstr))
+
+		resultChan <- curRes
+		if finish != 0 {
+			close(resultChan)
+			break
+		}
+	}
+
 }
 
 func (sad *StreammingAsrDecoder) AcceptWaveform(pcm []byte, final bool) {
@@ -231,6 +235,7 @@ func (sad *StreammingAsrDecoder) AcceptWaveform(pcm []byte, final bool) {
 		C.int(len(pcm)/2),
 		C.int(cfinal),
 	)
+
 }
 
 func (sad *StreammingAsrDecoder) Reset(nbest int, continuous_decoding bool) {
@@ -244,4 +249,5 @@ func (sad *StreammingAsrDecoder) Reset(nbest int, continuous_decoding bool) {
 		C.int(nbest),
 		C.int(continuous_decoding_int),
 	)
+	go sad.asyncAsrRes()
 }
