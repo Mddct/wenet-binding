@@ -206,6 +206,7 @@ void StreammingAsrWrapper::DecodeThreadFunc(int nbest) {
         stop_recognition_ = true;
       }
       has_result_.notify_one();
+      std::cout << "i'm out" << std::endl;
       break;
     } else if (state == wenet::DecodeState::kEndpoint) {
       decoder_->Rescoring();
@@ -217,6 +218,7 @@ void StreammingAsrWrapper::DecodeThreadFunc(int nbest) {
           decoder_->ResetContinuousDecoding();
         } else {
           stop_recognition_ = true;
+          has_result_.notify_one();
           break;
         }
       }

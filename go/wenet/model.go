@@ -232,3 +232,16 @@ func (sad *StreammingAsrDecoder) AcceptWaveform(pcm []byte, final bool) {
 		C.int(cfinal),
 	)
 }
+
+func (sad *StreammingAsrDecoder) Reset(nbest int, continuous_decoding bool) {
+	// to int
+	continuous_decoding_int := 0
+	if continuous_decoding {
+		continuous_decoding_int = 1
+	}
+	C.streamming_decoder_reset(
+		sad.decoder,
+		C.int(nbest),
+		C.int(continuous_decoding_int),
+	)
+}

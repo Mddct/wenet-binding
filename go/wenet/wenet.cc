@@ -148,8 +148,9 @@ int streamming_decoder_get_instance_result(StreammingDecoder *decoder,
   bool is_final = d->GetInstanceResult(result);
 
   auto cstr = result.c_str();
-  char *res = (char *)malloc(result.size());
+  char *res = (char *)malloc(result.size() + 1);
   memcpy(res, cstr, result.size());
+  res[result.size()] = '\0';
   *text = res;
   return (int)is_final;
 }
