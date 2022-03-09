@@ -1,3 +1,5 @@
+from typing import Generator
+
 import model
 from wenet.lib._pywrap_wenet import (Params, SimpleAsrModelWrapper,
                                      StreammingAsrWrapper)
@@ -21,7 +23,16 @@ class StreammingAsrDecoder:
             return
         self.streamming_decoder.AcceptWaveform(pcm, len(pcm), final)
 
-    def GetInstanceResult(self):
+    def GetInstanceResult(self) -> Generator:
+        """
+
+        one thread: decoder.AcceptWaveform
+        another thread: get result
+        for res in decoder.GetInstanceResult:
+            print(res)
+        Returns:
+            Generator:
+        """
         while True:
             result = ""
             final = self.streamming_decoder.GetInstanceResult(result)
