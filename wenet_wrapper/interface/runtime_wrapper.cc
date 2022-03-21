@@ -436,5 +436,5 @@ std::string LabelCheckerWrapper::Check(char *pcm, int num_samples,
   auto decoding_fst = std::make_shared<fst::StdVectorFst>();
   fst::Compose(ctc_fst_, align_fst, decoding_fst.get());
   local_decode_resource->fst = decoding_fst;
-  return model_->RecognizeMayWithLocalFst((pcm, num_samples, local_decode_resource);
+  return model_->RecognizeMayWithLocalFst((pcm, num_samples, 1, local_decode_resource);
 }
