@@ -61,10 +61,16 @@ PYBIND11_MODULE(_pywrap_wenet, m) {
              py::gil_scoped_release release;
              saw.AccepAcceptWaveform(pcm, num_samples, final);
            })
-      .def("GetInstanceResult", [](StreammingAsrWrapper &saw) {
-        py::gil_scoped_release release;
-        std::string text;
-        auto final = saw.GetInstanceResult(text);
-        return std::make_tuple(text, final);
-      });
+      .def("GetInstanceResult",
+           [](StreammingAsrWrapper &saw) {
+             py::gil_scoped_release release;
+             std::string text;
+             auto final = saw.GetInstanceResult(text);
+             return std::make_tuple(text, final);
+           })
+      .def("Reset",
+           [](StreammingAsrWrapper &saw, int nbest, bool continuous_decoding) {
+             py::gil_scoped_release release;
+             saw.Reset(nbest, continuous_decoding);
+           });
 }

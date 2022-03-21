@@ -258,13 +258,19 @@ void StreammingAsrWrapper::AccepAcceptWaveform(char *pcm, int num_samples,
 }
 
 void StreammingAsrWrapper::Reset(int nbest, bool continuous_decoding) {
-  CHECK(!decode_thread_->joinable());
+  // CHECK(!decode_thread_->joinable());
+  if (stop_recognition_) {
+    feature_pipeline->set_input_finished();
+  }
   continuous_decoding_ = continuous_decoding;
   stop_recognition_ = false;
   result_.clear();
   feature_pipeline_->Reset();
   decoder_->Reset();
 
+  if (decode_thread_->joinable()) {
+    decode_thread_->join();
+  }
   decode_thread_ = std::make_unique<std::thread>(
       &StreammingAsrWrapper::DecodeThreadFunc, this, nbest);
 }

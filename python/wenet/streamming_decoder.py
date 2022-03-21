@@ -16,13 +16,20 @@ class StreammingAsrDecoder:
         self.streamming_decoder = StreammingAsrWrapper(model.model, nbest, continuous_decoding)
         self.continuous_decoding = continuous_decoding
         self.nbest = nbest
+        self.final = False
+
+        self.has_data = False
 
     def AcceptWaveform(self,
                        pcm :bytes,
                        final :bool=True):
         if len(pcm) == 0:
             return
-        self.streamming_decoder.AcceptWaveform(pcm, len(pcm), final)
+        # when GetInstanceResult get final result, then must call Reset and then call AcceptWaveform
+        if self.final:
+            return
+        self.has_data = True
+        self.streamming_decoder.AcceptWaveform(pcm, int(len(pcm)/2), final)
 
     def GetInstanceResult(self) -> Generator:
         """
@@ -34,13 +41,19 @@ class StreammingAsrDecoder:
         Returns:
             Generator:
         """
+        assert (self.has_data is True), "no data received"
         result = ""
         final = False
         while not final:
-            result, final = self.streamming_decoder.GetInstanceResult(self.streamming_decoder)
+            result, final = self.streamming_decoder.GetInstanceResult()
             yield result
 
-#        self.Reset(1, self.continuous_decoding)
+        self.final = True
+        self._reset_()
 
-#    def Reset(self, nbest :int =1 , continuous_decoding :bool = False):
-#        self.streamming_decoder.Reset(nbest, continuous_decoding)
+    def _reset_(self, nbest :int =1 , continuous_decoding :bool = False):
+        self.final = False
+        self.has_data = False
+        self.streamming_decoder.Reset(nbest, continuous_decoding)
+        self.nbest = nbest
+        self.continuous_decoding = continuous_decoding
