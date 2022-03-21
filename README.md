@@ -82,8 +82,8 @@ func main(){
                 r = len(wav)
                 final = true
             }
-        streamming.AcceptWaveform(wav[i:r], final)
-        i = r
+            streamming.AcceptWaveform(wav[i:r], final)
+            i = r
         }
     }()
     for res := range streamming.Result{
