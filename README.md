@@ -5,7 +5,7 @@ binding wrapper for runtime
 
 * go binding
 * python binding
-* streamming and nonstreamming
+* streamming and nonstreamming decoding
 * c interface you can binding for other language
 
 ## example:
