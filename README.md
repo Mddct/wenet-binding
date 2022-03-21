@@ -2,9 +2,10 @@
 binding wrapper for runtime
 
 ## Highlights:
-** go binding
-** python binding
-** streamming and nonstreamming
+
+* go binding
+* python binding
+* streamming and nonstreamming
 
 ```
 ```bash
