@@ -1,8 +1,8 @@
 from typing import Generator
 
-import model
 from wenet.lib._pywrap_wenet import (Params, SimpleAsrModelWrapper,
                                      StreammingAsrWrapper)
+from wenet.model import WenetWrapper
 
 
 class StreammingAsrDecoder:
@@ -10,11 +10,12 @@ class StreammingAsrDecoder:
     streamming decoding given a model
     '''
     def __init__(self,
-                 model : model.WenetWrapper,
+                 model : WenetWrapper,
                  nbest :int = 1,
                  continuous_decoding :bool= False):
         self.streamming_decoder = StreammingAsrWrapper(model.model, nbest, continuous_decoding)
         self.continuous_decoding = continuous_decoding
+        self.nbest = nbest
 
     def AcceptWaveform(self,
                        pcm :bytes,
@@ -33,14 +34,13 @@ class StreammingAsrDecoder:
         Returns:
             Generator:
         """
-        while True:
-            result = ""
-            final = self.streamming_decoder.GetInstanceResult(result)
-
+        result = ""
+        final = False
+        while not final:
+            result, final = self.streamming_decoder.GetInstanceResult(self.streamming_decoder)
             yield result
 
-            if final:
-                self.Reset(1, self.continuous_decoding)
-                break
-    def Reset(self, nbest :int =1 , continuous_decoding :bool = False):
-        self.streamming_decoder.Reset(nbest, continuous_decoding)
+#        self.Reset(1, self.continuous_decoding)
+
+#    def Reset(self, nbest :int =1 , continuous_decoding :bool = False):
+#        self.streamming_decoder.Reset(nbest, continuous_decoding)

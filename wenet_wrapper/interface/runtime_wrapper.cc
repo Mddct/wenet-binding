@@ -251,8 +251,9 @@ void StreammingAsrWrapper::AccepAcceptWaveform(char *pcm, int num_samples,
     pdata++;
   }
   feature_pipeline_->AcceptWaveform(pcm_data);
-  if (final) {
+  if (final && !stop_recognition_) {
     feature_pipeline_->set_input_finished();
+    stop_recognition_ = true;
   }
 }
 
@@ -269,7 +270,6 @@ void StreammingAsrWrapper::Reset(int nbest, bool continuous_decoding) {
 }
 
 bool StreammingAsrWrapper::GetInstanceResult(std::string &result) {
-  CHECK(!decode_thread_->joinable());
   bool is_final = false;
   {
     std::unique_lock<std::mutex> lock(result_mutex_);

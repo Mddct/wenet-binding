@@ -82,6 +82,14 @@ target_link_libraries(_pywrap_wenet PRIVATE
   runtime_wrapper
   )
 
+# for c so
+add_library(cruntime SHARED
+  go/wenet/wenet.cc
+  )
+target_link_libraries(cruntime
+  runtime_wrapper
+  )
+
 # hard code
 # TODO: passing variable
 function(mv_wrap_lib)

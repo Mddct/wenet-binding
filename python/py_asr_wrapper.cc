@@ -1,5 +1,5 @@
-#include "wenet_wrapper/interface/runtime_wrapper.h"
 #include "pybind11/pybind11.h"
+#include "wenet_wrapper/interface/runtime_wrapper.h"
 
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -7,9 +7,9 @@ using namespace pybind11::literals;
 PYBIND11_MODULE(_pywrap_wenet, m) {
   py::class_<Params>(m, "Params")
       .def(py::init<std::string, std::string, std::string, int, std::string,
-                    std::string, double, int, int, int, int, double, double, double,
-                    int, double, int, int, double, double, double, int, int, double,
-                    double, int, bool>(),
+                    std::string, double, int, int, int, int, double, double,
+                    double, int, double, int, int, double, double, double, int,
+                    int, double, double, int, bool>(),
            "model_path"_a = "", "dict_path"_a = "", "unit_path"_a = "",
            "num_threads"_a = 1, "fst_path"_a = "", "context_path"_a = "",
            "context_score"_a = 3.0, "num_bins"_a = 80, "sample_rate"_a = 16000,
@@ -48,7 +48,23 @@ PYBIND11_MODULE(_pywrap_wenet, m) {
       .def_readwrite("language_type", &Params::language_type)
       .def_readwrite("lower_case", &Params::lower_case);
 
-  py::class_<SimpleAsrModelWrapper>(m, "SimpleAsrModelWrapper")
+  py::class_<SimpleAsrModelWrapper, std::shared_ptr<SimpleAsrModelWrapper>>(
+      m, "SimpleAsrModelWrapper")
       .def(py::init<const Params &>())
       .def("recognize", &SimpleAsrModelWrapper::Recognize);
+
+  py::class_<StreammingAsrWrapper>(m, "StreammingAsrWrapper")
+      .def(py::init<std::shared_ptr<SimpleAsrModelWrapper>, int, bool>())
+      .def("AcceptWaveform",
+           [](StreammingAsrWrapper &saw, char *pcm, int num_samples,
+              bool final) {
+             py::gil_scoped_release release;
+             saw.AccepAcceptWaveform(pcm, num_samples, final);
+           })
+      .def("GetInstanceResult", [](StreammingAsrWrapper &saw) {
+        py::gil_scoped_release release;
+        std::string text;
+        auto final = saw.GetInstanceResult(text);
+        return std::make_tuple(text, final);
+      });
 }

@@ -99,6 +99,8 @@ private:
   std::shared_ptr<wenet::DecodeResource> decode_resource_;
 };
 
+// this class not for python due to python GIL
+// issues: https://github.com/pybind/pybind11/issues/1723
 class StreammingAsrWrapper {
 public:
   StreammingAsrWrapper(std::shared_ptr<SimpleAsrModelWrapper> model,
@@ -114,6 +116,9 @@ public:
         continuous_decoding_(continuous_decoding) {}
 
   ~StreammingAsrWrapper() {
+    if (!stop_recognition_) {
+      feature_pipeline_->set_input_finished();
+    }
     if (decode_thread_->joinable()) {
       decode_thread_->join();
     }
@@ -127,7 +132,7 @@ public:
   // reset for new utterance
   void Reset(int nbest = 1, bool continuous_decoding = false);
 
-private:
+protected:
   void DecodeThreadFunc(int nbest);
 
   std::shared_ptr<SimpleAsrModelWrapper> model_;
@@ -150,4 +155,5 @@ private:
   std::condition_variable has_result_;
   std::string result_;
 };
+
 #endif // WENET_PYTHON_LIB_H_

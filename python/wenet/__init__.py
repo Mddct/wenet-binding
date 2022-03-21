@@ -1,4 +1,3 @@
-
 from ctypes import cdll
 from os import path
 
@@ -18,4 +17,5 @@ for lib in libs:
     cdll.LoadLibrary(path.join(libs_dirname, lib))
 
 from wenet.lib._pywrap_wenet import Params
-from wenet.model import WenetWrapper, load_model
+from wenet.model import StreammingAsrDecoder, WenetWrapper, load_model
+from wenet.streamming_decoder import StreammingAsrDecoder

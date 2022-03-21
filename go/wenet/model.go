@@ -27,7 +27,7 @@ func Load(modelDir string) (*SimpleAsrModelWrapper, error) {
 	// feature pipeline opts
 	fpopts := WithFeaturePipeline(80, 16000)
 	modelopts := WithModel(zip, dict, 1)
-	decodeopts := WithDecodeOpts(16, 0.5, 0.5, 0)
+	decodeopts := WithDecodeOpts(-1, 0.5, 0.5, 0)
 
 	p := NewParams(ctcopts, fpopts, modelopts, decodeopts)
 	return New(p), nil
