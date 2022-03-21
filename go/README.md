@@ -2,9 +2,9 @@
 go wrapper for wenet runtime
 - non streamming example
 ```go
-    model, err := wenet.Load("/root/model")
-    _ = err_
-    model.Recognize("/root/model/test.wav")
+model, err := wenet.Load("/root/model")
+_ = err
+model.Recognize("/root/model/test.wav")
 ```
 
 - streamming example
