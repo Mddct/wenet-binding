@@ -8,6 +8,11 @@
 
 namespace json = boost::json;
 
+const char *kDeletion = "<del>";
+// Is: Insertion and substitution
+const char *kIsStart = "<is>";
+const char *kIsEnd = "</is>";
+
 // serialize Decode Result, this function should be in Decode
 std::string SerializeResult(const std::vector<wenet::DecodeResult> &results,
                             bool finish, int n = 1) {
@@ -141,7 +146,15 @@ SimpleAsrModelWrapper::SimpleAsrModelWrapper(const Params &params) {
 }
 
 std::string SimpleAsrModelWrapper::Recognize(char *pcm, int num_samples,
-                                             int nbest) {
+                                             int n_best) {
+
+  return this->Recognize(pcm, num_samples, n_best, nullptr);
+}
+
+// TODO: split function
+std::string SimpleAsrModelWrapper::RecognizeMayWithLocalFst(
+    char *pcm, int num_samples, int nbest,
+    std::shared_ptr<wenet::DecodeResource> local_decode_resource) {
   std::vector<float> pcm_data(num_samples);
   const int16_t *pdata = reinterpret_cast<const int16_t *>(pcm);
   for (int i = 0; i < num_samples; i++) {
@@ -155,7 +168,11 @@ std::string SimpleAsrModelWrapper::Recognize(char *pcm, int num_samples,
   // resource_->decode_resource->fst = decoding_fst;
   LOG(INFO) << "num frames " << feature_pipeline->num_frames();
 
-  wenet::TorchAsrDecoder decoder(feature_pipeline, decode_resource_,
+  auto decode_resource = decode_resource_;
+  if (local_decode_resource != nullptr) {
+    decode_resource = local_decode_resource;
+  }
+  wenet::TorchAsrDecoder decoder(feature_pipeline, decode_resource,
                                  *decode_config_);
   while (true) {
     wenet::DecodeState state = decoder.Decode();
@@ -260,7 +277,7 @@ void StreammingAsrWrapper::AccepAcceptWaveform(char *pcm, int num_samples,
 void StreammingAsrWrapper::Reset(int nbest, bool continuous_decoding) {
   // CHECK(!decode_thread_->joinable());
   if (stop_recognition_) {
-    feature_pipeline->set_input_finished();
+    feature_pipeline_->set_input_finished();
   }
   continuous_decoding_ = continuous_decoding;
   stop_recognition_ = false;
@@ -296,4 +313,128 @@ bool StreammingAsrWrapper::GetInstanceResult(std::string &result) {
     }
   }
   return is_final;
+}
+
+std::shared_ptr<fst::SymbolTable>
+MakeSymbolTableForFst(std::shared_ptr<fst::SymbolTable> isymbol_table) {
+  LOG(INFO) << isymbol_table;
+  CHECK(isymbol_table != nullptr);
+  auto osymbol_table = std::make_shared<fst::SymbolTable>();
+  osymbol_table->AddSymbol("<eps>", 0);
+  CHECK_EQ(isymbol_table->Find("<blank>"), 0);
+  osymbol_table->AddSymbol("<blank>", 1);
+  for (int i = 1; i < isymbol_table->NumSymbols(); i++) {
+    std::string symbol = isymbol_table->Find(i);
+    osymbol_table->AddSymbol(symbol, i + 1);
+  }
+  osymbol_table->AddSymbol(kDeletion, isymbol_table->NumSymbols() + 1);
+  osymbol_table->AddSymbol(kIsStart, isymbol_table->NumSymbols() + 2);
+  osymbol_table->AddSymbol(kIsEnd, isymbol_table->NumSymbols() + 3);
+  return osymbol_table;
+}
+
+void CompileCtcFst(std::shared_ptr<fst::SymbolTable> symbol_table,
+                   fst::StdVectorFst *ofst) {
+  ofst->DeleteStates();
+  int start = ofst->AddState();
+  ofst->SetStart(start);
+  CHECK_EQ(symbol_table->Find("<eps>"), 0);
+  CHECK_EQ(symbol_table->Find("<blank>"), 1);
+  ofst->AddArc(start, fst::StdArc(1, 0, 0.0, start));
+  // Exclude kDeletion and kInsertion
+  for (int i = 2; i < symbol_table->NumSymbols() - 3; i++) {
+    int s = ofst->AddState();
+    ofst->AddArc(start, fst::StdArc(i, i, 0.0, s));
+    ofst->AddArc(s, fst::StdArc(i, 0, 0.0, s));
+    ofst->AddArc(s, fst::StdArc(0, 0, 0.0, start));
+  }
+  ofst->SetFinal(start, fst::StdArc::Weight::One());
+  fst::ArcSort(ofst, fst::StdOLabelCompare());
+}
+
+LabelCheckerWrapper::LabelCheckerWrapper(
+    std::shared_ptr<SimpleAsrModelWrapper> model)
+    : model_(model), ctc_fst_(std::make_shared<fst::StdVectorFst>()) {
+  auto decode_resource = model_->decode_resource();
+  CHECK(decode_resource->unit_table != nullptr);
+
+  wfst_symbol_table_ = MakeSymbolTableForFst(decode_resource->unit_table);
+  CompileCtcFst(wfst_symbol_table_, ctc_fst_.get());
+}
+
+bool MapToLabel(const std::vector<string> &chars,
+                std::shared_ptr<fst::SymbolTable> symbol_table,
+                std::vector<int> *labels) {
+  labels->clear();
+  // Split label to char sequence
+  for (size_t i = 0; i < chars.size(); i++) {
+    std::string label = chars[i];
+    int id = symbol_table->Find(label);
+    if (id != -1) { // fst::kNoSymbol
+      // LOG(INFO) << label << " " << id;
+      labels->push_back(id);
+    }
+  }
+  return true;
+}
+
+void CompileAlignFst(std::vector<int> &labels,
+                     std::shared_ptr<fst::SymbolTable> symbol_table,
+                     fst::StdVectorFst *ofst, float is_penalty,
+                     float del_penalty) {
+  ofst->DeleteStates();
+  int deletion = symbol_table->Find(kDeletion);
+  int insertion_start = symbol_table->Find(kIsStart);
+  int insertion_end = symbol_table->Find(kIsEnd);
+
+  int start = ofst->AddState();
+  ofst->SetStart(start);
+  // Filler State
+  int filler_start = ofst->AddState();
+  int filler_end = ofst->AddState();
+  for (int i = 2; i < symbol_table->NumSymbols() - 3; i++) {
+    ofst->AddArc(filler_start, fst::StdArc(i, i, is_penalty, filler_end));
+  }
+  ofst->AddArc(filler_end, fst::StdArc(0, 0, 0.0, filler_start));
+
+  int prev = start;
+  // Alignment path and optional filler
+  for (size_t i = 0; i < labels.size(); i++) {
+    int cur = ofst->AddState();
+    // 1. Insertion or Substitution
+    ofst->AddArc(prev, fst::StdArc(0, insertion_start, 0.0, filler_start));
+    ofst->AddArc(filler_end, fst::StdArc(0, insertion_end, 0.0, prev));
+    // 2. Correct
+    ofst->AddArc(prev, fst::StdArc(labels[i], labels[i], 0.0, cur));
+    // 3. Deletion
+    ofst->AddArc(prev, fst::StdArc(0, deletion, del_penalty, cur));
+
+    prev = cur;
+  }
+  // Optional add endding filler
+  ofst->AddArc(prev, fst::StdArc(0, insertion_start, 0.0, filler_start));
+  ofst->AddArc(filler_end, fst::StdArc(0, insertion_end, 0.0, prev));
+  ofst->SetFinal(prev, fst::StdArc::Weight::One());
+  fst::ArcSort(ofst, fst::StdILabelCompare());
+}
+
+std::string LabelCheckerWrapper::Check(char *pcm, int num_samples,
+                                       std::vector<std::string> &chars) {
+  if (chars.empty()) {
+    return model_->Recognize(pcm, num_samples, 1);
+  }
+
+  std::vector<int> labels;
+  MapToLabel(chars, wfst_symbol_table_, &labels);
+  // Prepare FST for alignment decoding
+  fst::StdVectorFst align_fst;
+  // TODO:  parameter refine later
+  CompileAlignFst(labels, wfst_symbol_table_, &align_fst, 3.0, 4.0);
+  auto local_decode_resource =
+      std::make_shared<wenet::DecodeResource>(*(model_->decode_resource()));
+
+  auto decoding_fst = std::make_shared<fst::StdVectorFst>();
+  fst::Compose(ctc_fst_, align_fst, decoding_fst.get());
+  local_decode_resource->fst = decoding_fst;
+  return model_->RecognizeMayWithLocalFst((pcm, num_samples, local_decode_resource);
 }

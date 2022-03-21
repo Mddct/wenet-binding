@@ -81,7 +81,10 @@ extern std::once_flag once_nitialized_;
 class SimpleAsrModelWrapper {
 public:
   SimpleAsrModelWrapper(const Params &params);
-  std::string Recognize(char *pcm, int num_sampleds, int n_best = 1);
+  std::string Recognize(char *pcm, int num_samples, int n_best = 1);
+  std::string RecognizeMayWithLocalFst(
+      char *pcm, int num_samples, int n_best,
+      std::shared_ptr<wenet::DecodeResource> local_decode_resource);
 
   std::shared_ptr<wenet::FeaturePipelineConfig> feature_config() {
     return feature_config_;
@@ -132,7 +135,7 @@ public:
   // reset for new utterance
   void Reset(int nbest = 1, bool continuous_decoding = false);
 
-protected:
+private:
   void DecodeThreadFunc(int nbest);
 
   std::shared_ptr<SimpleAsrModelWrapper> model_;
@@ -154,6 +157,21 @@ protected:
   mutable std::mutex result_mutex_;
   std::condition_variable has_result_;
   std::string result_;
+};
+
+// label checker for checking label
+class LabelCheckerWrapper {
+public:
+  LabelCheckerWrapper(std::shared_ptr<SimpleAsrModelWrapper> model);
+  std::string Check(char *pcm, int num_samples,
+                    std::vector<std::string> &chars);
+
+private:
+  std::shared_ptr<SimpleAsrModelWrapper> model_;
+
+  // once_initalized for wfst_symbol_table and ctc fst
+  std::shared_ptr<fst::SymbolTable> wfst_symbol_table_;
+  std::shared_ptr<fst::StdVectorFst> ctc_fst_;
 };
 
 #endif // WENET_PYTHON_LIB_H_
