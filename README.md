@@ -66,30 +66,29 @@ for res in decoder.GetInstanceResult():
 ```go
 # go run example.go
 func main(){
-model, err := wenet.Load("/root/model")
-wav, err := ioutil.ReadFile("/root/model/test.wav")
-if err != nil{
-panic(err)
-}
-
-streamming := wenet.NewStreammingAsrDecoder(model, 1, false)
-go func(){
-
-    nbytes := ((16000/1000)*2*200)
-    for i := 0; i < len(wav); {
-        r := i+nbytes
-        final := false
-        if r > len(wav){
-            r = len(wav)
-            final = true
-        }
-                    streamming.AcceptWaveform(wav[i:r], final)
-        i = r
+    model, err := wenet.Load("/root/model")
+    wav, err := ioutil.ReadFile("/root/model/test.wav")
+    if err != nil{
+    panic(err)
     }
-}()
-for res := range streamming.Result{
-    fmt.Println(res)
-}
+
+    streamming := wenet.NewStreammingAsrDecoder(model, 1, false)
+    go func(){
+        nbytes := ((16000/1000)*2*200)
+        for i := 0; i < len(wav); {
+            r := i+nbytes
+            final := false
+            if r > len(wav){
+                r = len(wav)
+                final = true
+            }
+        streamming.AcceptWaveform(wav[i:r], final)
+        i = r
+        }
+    }()
+    for res := range streamming.Result{
+        fmt.Println(res)
+    }
 
 }
 ```
