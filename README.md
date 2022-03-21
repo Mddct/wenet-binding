@@ -1,12 +1,10 @@
-# wenet-python
+# wenet-binding
 binding wrapper for runtime
 
-features:
--  go binding
-
--  python binding
-
--  streamming and nonstreamming
+## Highlights:
+* *go binding
+* *python binding
+* *streamming and nonstreamming
 
 ```
 ```bash
