@@ -9,8 +9,8 @@ binding wrapper for runtime
 * c interface you can binding for other language
 
 ## example:
-- [python example](go/README.md)
-- [go example](python/README.md)
+- [go example](go/README.md)
+- [python example](python/README.md)
 
 # TODO:
 - [x] simple wrapper support load and recognize funtion
