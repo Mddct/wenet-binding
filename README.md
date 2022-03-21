@@ -109,6 +109,6 @@ func main(){
 - [x] offline go binding
 - [ ] github action many linux
 - [ ] exception
-- [ ] asynchronous for streamming decoding
-- [ ] streamming decode go example
-- [ ] reset new utterance for same decoder
+- [x] asynchronous for streamming decoding
+- [x] streamming decode go example
+- [x] reset new utterance for same decoder
