@@ -148,7 +148,7 @@ SimpleAsrModelWrapper::SimpleAsrModelWrapper(const Params &params) {
 std::string SimpleAsrModelWrapper::Recognize(char *pcm, int num_samples,
                                              int n_best) {
 
-  return this->Recognize(pcm, num_samples, n_best, nullptr);
+  return this->RecognizeMayWithLocalFst(pcm, num_samples, n_best, nullptr);
 }
 
 // TODO: split function
