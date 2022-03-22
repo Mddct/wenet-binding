@@ -75,8 +75,8 @@ import wenet
 model = wenet.load_model("../model")
 
 labels =  ["甚", "至", "出", "现", "交", "易", "几", "乎", "停", "滞", "的", "情", "好"]
-checker = wenet.LabelChecker(model, labels)
-checker.check()
+checker = wenet.LabelChecker(model)
+checker.check("../model/test.wav", labels)
 ```
 ```bash
 [{"sentence":"甚至出现交易几乎停滞的情<is>况</is>","word_pieces":[{"word":"甚","start":0,"end":840},{"word":"至","start":840,"end":1080},{"word":"出","start":1080,"end":1320},{"word":"现","start":1320,"end":1640},{"word":"交","start":1640,"end":1880},{"word":"易","start":1880,"end":2120},{"word":"几","start":2120,"end":2320},{"word":"乎","start":2320,"end":2560},{"word":"停","start":2560,"end":2800},{"word":"滞","start":2800,"end":2960},{"word":"的","start":2960,"end":3200},{"word":"情","start":3200,"end":3560},{"word":"况","start":3560,"end":4120}]}]
