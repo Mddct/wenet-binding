@@ -50,6 +50,14 @@ int streamming_decoder_get_instance_result(StreammingDecoder *decoder,
 void streamming_decoder_reset(StreammingDecoder *decoder, int nbest,
                               int continuous_decoding);
 
+typedef struct LabelChecker LabelChecker;
+LabelChecker *wenet_label_checker_init(Model *model);
+// caller should cal free
+char *wenet_label_checker_check(LabelChecker *checker, char *pcm,
+                                int num_samples, char **plabels,
+                                float is_penalty, float del_penalty);
+
+void wenet_label_checker_free(LabelChecker *checker);
 #ifdef __cplusplus
 }
 #endif

@@ -163,6 +163,40 @@ void streamming_decoder_reset(StreammingDecoder *decoder, int nbest,
   d->Reset(nbest, bool(continuous_decoding));
   return;
 }
+LabelChecker *wenet_label_checker_init(Model *model) {
+  if (model == nullptr) {
+    return nullptr;
+  }
+  auto m = std::shared_ptr<SimpleAsrModelWrapper>(
+      reinterpret_cast<SimpleAsrModelWrapper *>(model));
+  auto checker = new LabelCheckerWrapper(m);
+  return (LabelChecker *)checker;
+}
+char *wenet_label_checker_check(LabelChecker *checker, char *pcm,
+                                int num_samples, char **plabels,
+                                float is_penalty, float del_penalty) {
+  if (checker == nullptr) {
+    return nullptr;
+  }
+  auto cker = (LabelCheckerWrapper *)checker;
+  std::vector<string> labels(std::begin(plabels), std::end(plabels));
+  auto result = cker->Check(pcm, num_samples, labels, is_penalty, del_penalty);
+
+  auto cstr = result.c_str();
+  char *res = (char *)malloc(result.size() + 1);
+  res[result.size()] = '\0';
+  return res;
+}
+
+void wenet_label_checker_free(LabelChecker *checker) {
+  if (checker == nullptr) {
+    return;
+  }
+
+  LabelCheckerWrapper *cker = (LabelCheckerWrapper *)checker;
+  delete cker;
+  return;
+}
 
 #ifdef __cplusplus
 }
