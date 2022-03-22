@@ -7,6 +7,7 @@ binding wrapper for runtime
 * python binding
 * streamming and nonstreamming decoding
 * c interface you can binding for other language
+* some instresting tools eg: label_check
 
 ## example:
 - [go example](go/README.md)
