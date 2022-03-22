@@ -163,8 +163,8 @@ private:
 class LabelCheckerWrapper {
 public:
   LabelCheckerWrapper(std::shared_ptr<SimpleAsrModelWrapper> model);
-  std::string Check(char *pcm, int num_samples,
-                    std::vector<std::string> &chars);
+  std::string Check(char *pcm, int num_samples, std::vector<std::string> &chars,
+                    float is_penalty = 1.0, float del_penalty = 1.0);
 
 private:
   std::shared_ptr<SimpleAsrModelWrapper> model_;

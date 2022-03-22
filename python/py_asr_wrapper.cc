@@ -1,4 +1,5 @@
 #include "pybind11/pybind11.h"
+#include "pybind11/stl.h"
 #include "wenet_wrapper/interface/runtime_wrapper.h"
 
 namespace py = pybind11;
@@ -73,4 +74,8 @@ PYBIND11_MODULE(_pywrap_wenet, m) {
              py::gil_scoped_release release;
              saw.Reset(nbest, continuous_decoding);
            });
+
+  py::class_<LabelCheckerWrapper>(m, "LabelCheckerWrapper")
+      .def(py::init<std::shared_ptr<SimpleAsrModelWrapper>>())
+      .def("Check", &LabelCheckerWrapper::Check);
 }

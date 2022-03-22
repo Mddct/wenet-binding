@@ -1,4 +1,5 @@
 #include "boost/json/src.hpp"
+#include "decoder/params.h"
 #include "post_processor/post_processor.h"
 #include "utils/string.h"
 #include "utils/timer.h"
@@ -281,8 +282,9 @@ void StreammingAsrWrapper::Reset(int nbest, bool continuous_decoding) {
   }
   if (decode_thread_->joinable()) {
     decode_thread_->join();
-    continuous_decoding_ = continuous_decoding;
   }
+
+  continuous_decoding_ = continuous_decoding;
   stop_recognition_ = false;
   result_.clear();
   feature_pipeline_->Reset();
@@ -419,7 +421,8 @@ void CompileAlignFst(std::vector<int> &labels,
 }
 
 std::string LabelCheckerWrapper::Check(char *pcm, int num_samples,
-                                       std::vector<std::string> &chars) {
+                                       std::vector<std::string> &chars,
+                                       float is_penalty, float del_penalty) {
   if (chars.empty()) {
     return model_->Recognize(pcm, num_samples, 1);
   }
@@ -429,12 +432,15 @@ std::string LabelCheckerWrapper::Check(char *pcm, int num_samples,
   // Prepare FST for alignment decoding
   fst::StdVectorFst align_fst;
   // TODO:  parameter refine later
-  CompileAlignFst(labels, wfst_symbol_table_, &align_fst, 3.0, 4.0);
+  CompileAlignFst(labels, wfst_symbol_table_, &align_fst, is_penalty,
+                  del_penalty);
   auto local_decode_resource =
       std::make_shared<wenet::DecodeResource>(*(model_->decode_resource()));
 
   auto decoding_fst = std::make_shared<fst::StdVectorFst>();
-  fst::Compose(ctc_fst_, align_fst, decoding_fst.get());
+  fst::Compose(*ctc_fst_, align_fst, decoding_fst.get());
   local_decode_resource->fst = decoding_fst;
-  return model_->RecognizeMayWithLocalFst((pcm, num_samples, 1, local_decode_resource);
+  local_decode_resource->symbol_table = wfst_symbol_table_;
+  return model_->RecognizeMayWithLocalFst(pcm, num_samples, 1,
+                                          local_decode_resource);
 }
