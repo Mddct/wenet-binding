@@ -163,7 +163,7 @@ void streamming_decoder_reset(StreammingDecoder *decoder, int nbest,
   d->Reset(nbest, bool(continuous_decoding));
   return;
 }
-LabelChecker *wenet_label_checker_init(Model *model) {
+LabelChecker *label_checker_init(Model *model) {
   if (model == nullptr) {
     return nullptr;
   }
@@ -172,9 +172,8 @@ LabelChecker *wenet_label_checker_init(Model *model) {
   auto checker = new LabelCheckerWrapper(m);
   return (LabelChecker *)checker;
 }
-char *wenet_label_checker_check(LabelChecker *checker, char *pcm,
-                                int num_samples, char **plabels,
-                                float is_penalty, float del_penalty) {
+char *label_checker_check(LabelChecker *checker, char *pcm, int num_samples,
+                          char **plabels, float is_penalty, float del_penalty) {
   if (checker == nullptr) {
     return nullptr;
   }
@@ -184,11 +183,12 @@ char *wenet_label_checker_check(LabelChecker *checker, char *pcm,
 
   auto cstr = result.c_str();
   char *res = (char *)malloc(result.size() + 1);
+  memcpy(res, cstr, result.size());
   res[result.size()] = '\0';
   return res;
 }
 
-void wenet_label_checker_free(LabelChecker *checker) {
+void label_checker_free(LabelChecker *checker) {
   if (checker == nullptr) {
     return;
   }

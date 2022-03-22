@@ -251,3 +251,59 @@ func (sad *StreammingAsrDecoder) Reset(nbest int, continuous_decoding bool) {
 	)
 	go sad.asyncAsrRes()
 }
+
+type LabelChecker struct {
+	checker *C.struct_label_checker
+
+	ISPenalty  float32
+	DelPenalty float32
+}
+
+func NewLabelChecker(samwp *SimpleAsrModelWrapper) *LabelChecker {
+	if samwp == nil {
+		return nil
+	}
+	checker := C.label_checker_init(
+		samwp.inst,
+	)
+	free := func(lcker *LabelChecker) {
+		C.label_checker_free(lcker.checker)
+	}
+	labekChecker := &LabelChecker{
+		ISPenalty:  1.0,
+		DelPenalty: 1.0,
+
+		checker: checker,
+	}
+	runtime.SetFinalizer(labekChecker, free)
+
+	return labekChecker
+}
+
+func (lcker *LabelChecker) Check(pcm []byte, labels []string) string {
+	if len(pcm) == 0 {
+		return ""
+	}
+	cBytes := C.CBytes(pcm)
+	defer C.free(cBytes)
+
+	cStrArray := make([]*C.char, len(labels))
+	for i := range cStrArray {
+		cStrArray[i] = C.CString(labels[i])
+		defer C.free(unsafe.Pointer(cStrArray[i]))
+	}
+	res := C.label_checker_check(
+		lcker.checker,
+
+		(*C.char)(cBytes),
+		C.int(len(pcm)/2),
+		(**C.char)(unsafe.Pointer(&cStrArray[0])),
+		C.int(len(labels)),
+
+		C.float(lcker.ISPenalty),
+		C.float(lcker.DelPenalty),
+	)
+
+	defer C.free(unsafe.Pointer(res))
+	return C.GoString(res)
+}
