@@ -75,7 +75,7 @@ import wenet
 model = wenet.load_model("../model")
 
 labels =  ["甚", "至", "出", "现", "交", "易", "几", "乎", "停", "滞", "的", "情", "好"]
-checker = wenet.LabelChecker(model)
+checker = wenet.LabelChecker(model, labels)
 checker.check()
 ```
 ```bash
