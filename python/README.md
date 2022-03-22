@@ -1,4 +1,4 @@
-# wenet-binding
+# wenet-python
 python wrapper for wenet runtime
 - non streamming example
 ```python

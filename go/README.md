@@ -1,4 +1,4 @@
-# wenet-python
+# wenet-go
 go wrapper for wenet runtime
 - non streamming example
 ```go
