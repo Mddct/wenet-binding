@@ -11,7 +11,7 @@ binding wrapper for runtime (early stage)
 
 ## example:
 - [go example](go/README.md)
-- [python example](python/README.md)
+- [python example](python/README.md) 
 
 # TODO:
 - [x] simple wrapper support load and recognize funtion
@@ -20,6 +20,7 @@ binding wrapper for runtime (early stage)
 - [x] offline go binding
 - [ ] github action many linux
 - [ ] test case cover 
+- [ ] wenet ctc decoder for batch inference and mwer loss
 - [ ] exception
 - [x] non streamming label check
 - [x] asynchronous for streamming decoding
