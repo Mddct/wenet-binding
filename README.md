@@ -20,6 +20,7 @@ binding wrapper for runtime
 - [x] offline go binding
 - [ ] github action many linux
 - [ ] exception
+- [x] non streamming label check
 - [x] asynchronous for streamming decoding
 - [x] streamming decode go example
 - [x] reset new utterance for same decoder
