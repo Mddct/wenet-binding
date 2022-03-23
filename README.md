@@ -1,5 +1,5 @@
 # wenet-binding
-binding wrapper for runtime
+binding wrapper for runtime (early stage)
 
 ## Highlights:
 
