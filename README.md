@@ -19,6 +19,7 @@ binding wrapper for runtime
 - [x] download model and model dir
 - [x] offline go binding
 - [ ] github action many linux
+- [ ] test case cover 
 - [ ] exception
 - [x] non streamming label check
 - [x] asynchronous for streamming decoding
