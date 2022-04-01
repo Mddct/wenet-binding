@@ -104,9 +104,11 @@ void wenet_free(Model *model) {
 char *wenet_recognize(Model *model, char *data, int n_samples, int nbest) {
   SimpleAsrModelWrapper *m = (SimpleAsrModelWrapper *)model;
   std::string result(std::move(m->Recognize(data, n_samples, nbest)));
+  
   auto cstr = result.c_str();
-  char *res = (char *)malloc(result.size());
+  char *res = (char *)malloc(result.size() + 1);
   memcpy(res, cstr, result.size());
+  res[result.size()] = '\0';
   return res;
 }
 
