@@ -54,7 +54,7 @@ model, err := wenet.Load("/root/model")
 _ = err_
 
 labels := []string{"甚", "至", "出", "现", "交", "易", "几", "乎", "停", "滞", "的", "情", "好"}
-checker := wenet.LabelChecker(model)
+checker := wenet.NewLabelChecker(model)
 
 wav, _ := ioutil.ReadFile("/root/model/test.wav")
 checker.Check(wav, labels)
