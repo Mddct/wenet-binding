@@ -253,6 +253,9 @@ func (sad *StreammingAsrDecoder) Reset(nbest int, continuous_decoding bool) {
 }
 
 type LabelChecker struct {
+	// runtime keep alive when in c code
+	model *SimpleAsrModelWrapper
+	
 	checker *C.struct_label_checker
 
 	ISPenalty  float32
@@ -270,8 +273,9 @@ func NewLabelChecker(samwp *SimpleAsrModelWrapper) *LabelChecker {
 		C.label_checker_free(lcker.checker)
 	}
 	labekChecker := &LabelChecker{
-		ISPenalty:  1.0,
-		DelPenalty: 1.0,
+		model: samwp,
+		ISPenalty:  3.0,
+		DelPenalty: 4.0,
 
 		checker: checker,
 	}
@@ -292,6 +296,7 @@ func (lcker *LabelChecker) Check(pcm []byte, labels []string) string {
 		cStrArray[i] = C.CString(labels[i])
 		defer C.free(unsafe.Pointer(cStrArray[i]))
 	}
+	runtime.KeepAlive(lcker.model)
 	res := C.label_checker_check(
 		lcker.checker,
 
